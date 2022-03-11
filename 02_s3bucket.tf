@@ -2,17 +2,23 @@ resource "aws_s3_bucket" "website_s3" {
   bucket = var.fqdn
 }
 
+resource "aws_cloudfront_origin_access_identity" "s3_cloudfront_oai" {
+  comment = "CloudFront Access Identity for S3 hosted website ${var.fqdn}"
+}
+
 resource "aws_s3_bucket_policy" "policy_s3" {
   bucket = aws_s3_bucket.website_s3.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "S3WebBucket"
-        Effect    = "Allow"
-        Principal = "*"
-        Action    = "s3:GetObject"
-        Resource  = ["arn:aws:s3:::${var.fqdn}/*"]
+        Sid = "S3WebBucket"
+        Principal = {
+          AWS = aws_cloudfront_origin_access_identity.s3_cloudfront_oai.iam_arn
+        }
+        Action   = "s3:GetObject"
+        Effect   = "Allow"
+        Resource = ["${aws_s3_bucket.website_s3.arn}/*"]
       }
     ]
   })
